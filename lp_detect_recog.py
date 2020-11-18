@@ -68,9 +68,12 @@ def sort_characters(det, lp_lines_type, img_lp, img_lp0, names_recog):
     line2_license_str = ''.join([names_recog[xywhc[4]] for xywhc in sorted_line2_xywhc_list])
     return line1_license_str + line2_license_str
 
-def extract_img_lp(im0, xyxy, img_lp, device, imgsz_recog, half):
+def extract_img_lp0(im0, xyxy, img_lp, device, imgsz_recog, half):
     # Retrieve original resolution for each lp
     img_lp0 = im0[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2]), :]   # BGR
+    
+    return img_lp0
+def extract_img_lp1(img_lp0, img_lp, device, imgsz_recog, half):
     # Padded resize
     img_lp = letterbox(img_lp0, new_shape=imgsz_recog)[0]
     # Convert
@@ -82,7 +85,109 @@ def extract_img_lp(im0, xyxy, img_lp, device, imgsz_recog, half):
     if img_lp.ndimension() == 3:
         img_lp = img_lp.unsqueeze(0)
 
-    return img_lp0
+    return img_lp
+
+def extract_img_lp(im0, xyxy, img_lp, device, imgsz_recog, half):
+    img_lp0 = extract_img_lp0(im0, xyxy, img_lp, device, imgsz_recog, half)
+    img_lp = extract_img_lp1(img_lp0, img_lp, device, imgsz_recog, half)
+    return img_lp, img_lp0
+
+def recog2(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, classify, modelc, names_recog, save_txt, gn, txt_path, save_img, view_img, colors):
+    # Write results
+    for *xyxy, conf, cls in reversed(det):
+        ''' But first, Recognition '''
+        img_lp, img_lp0 = extract_img_lp(im0, xyxy, img_lp, device, imgsz_recog, half)
+
+        t1 = time_synchronized()
+        
+        # Inference
+        pred_lp = model_recog(img_lp, augment=opt.augment)[0]
+        
+        # Apply NMS
+        pred_lp = non_max_suppression(pred_lp, opt.conf_thres_recog, opt.iou_thres_recog,
+                                        classes=opt.classes_recog, agnostic=opt.agnostic_nms)
+        
+        t2 = time_synchronized()
+        all_t2_t1 = all_t2_t1 + t2 - t1
+
+        # Apply Classifier
+        if classify:
+            pred_lp = apply_classifier(pred_lp, modelc, img_lp, img_lp0)
+        
+        # check_lp_lines_type
+        cls = check_lp_lines_type(pred_lp[0], cls, img_lp, img_lp0)
+        
+        # Sort characters based on pred_lp
+        license_str = sort_characters(pred_lp[0], cls, img_lp, img_lp0, names_recog)
+        if len(license_str) == 0:
+            continue
+
+        if save_txt:  # Write to file
+            xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+            line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
+            with open(txt_path + '.txt', 'a') as f:
+                f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
+        if save_img or view_img:  # Add bbox to image
+            # label = '%s %.2f' % (names[int(cls)], conf)
+            label = '%s %.2f' % (license_str, conf)
+            line_thickness = 3 if im0.shape[0] < 500 else 4
+            plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+
+def recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, classify, modelc, names_recog, save_txt, gn, txt_path, save_img, view_img, colors):
+    img_lp0s = [extract_img_lp0(im0, xyxy, img_lp, device, imgsz_recog, half) for *xyxy, _, _ in reversed(det)]
+    img_lps = [extract_img_lp1(img_lp0, img_lp, device, imgsz_recog, half) for img_lp0 in img_lp0s]
+    
+    print()
+    print([x.shape for x in img_lps])
+    print()
+
+    # TODO: cannot stack because the img_lp doesn't come out the same size
+    img_lp = torch.stack(img_lps).to(device)
+    
+    print()
+    print(img_lp.shape)
+    print()
+    
+    img_lp = img_lp.half() if half else img_lp.float()
+    img_lp /= 255.0 # 0 - 255 to 0.0 - 1.0
+    
+    t1 = time_synchronized()
+    
+    # Inference
+    infs = model_recog(img_lp, augment=opt.augment)[0]
+
+    # Apply NMS
+    pred_lps = non_max_suppression(infs, opt.conf_thres_recog, opt.iou_thres_recog,
+                                    classes=opt.classes_recog, agnostic=opt.agnostic_nms)
+    
+    t2 = time_synchronized()
+    all_t2_t1 = all_t2_t1 + t2 - t1
+    
+    # Write results
+    for (*xyxy, conf, cls), img_lp, img_lp0, pred_lp in zip(reversed(det), img_lps, img_lp0s, pred_lps):
+        # Apply Classifier
+        if classify:
+            pred_lp = apply_classifier(pred_lp, modelc, img_lp, img_lp0)
+        
+        cls = check_lp_lines_type(pred_lp[0], cls, img_lp, img_lp0)
+        
+        # Sort characters based on pred_lp
+        license_str = sort_characters(pred_lp[0], cls, img_lp, img_lp0, names_recog)
+        if len(license_str) == 0:
+            continue
+
+        if save_txt:  # Write to file
+            xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+            line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
+            with open(txt_path + '.txt', 'a') as f:
+                f.write(('%g ' * len(line)).rstrip() % line + '\n')
+
+        if save_img or view_img:  # Add bbox to image
+            # label = '%s %.2f' % (names[int(cls)], conf)
+            label = '%s %.2f' % (license_str, conf)
+            line_thickness = 3 if im0.shape[0] < 500 else 4
+            plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
 def detect_recog(save_img=False):
     source, weights_detect, weights_recog, view_img, save_txt, imgsz_detect, imgsz_recog = opt.source, opt.weights_detect, opt.weights_recog, opt.view_img, opt.save_txt, opt.img_size_detect, opt.img_size_recog
@@ -112,6 +217,8 @@ def detect_recog(save_img=False):
     if classify:
         modelc = load_classifier(name='resnet101', n=2)  # initialize
         modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
+    else:
+        modelc = None
 
     # Set Dataloader
     vid_path, vid_writer = None, None
@@ -143,12 +250,13 @@ def detect_recog(save_img=False):
         if img.ndimension() == 3:
             img = img.unsqueeze(0)
 
-        # Inference
         t1 = time_synchronized()
-        pred = model_detect(img, augment=opt.augment)[0]
 
+        # Inference
+        pred = model_detect(img, augment=opt.augment)[0]
         # Apply NMS
         pred = non_max_suppression(pred, opt.conf_thres_detect, opt.iou_thres_detect, classes=opt.classes_detect, agnostic=opt.agnostic_nms)
+        
         t2 = time_synchronized()
         all_t2_t1 = t2-t1
 
@@ -177,51 +285,8 @@ def detect_recog(save_img=False):
                     s += '%g %ss, ' % (n, names_detect[int(c)])  # add to string
 
                 # Write results
-                for *xyxy, conf, cls in reversed(det):
-                    ''' But first, Recognition '''
-                    # # Retrieve original resolution for each lp
-                    # img_lp0 = im0[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2]), :]   # BGR
-                    # # Padded resize
-                    # img_lp = letterbox(img_lp0, new_shape=imgsz_recog)[0]
-                    # # Convert
-                    # img_lp = img_lp[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-                    # img_lp = np.ascontiguousarray(img_lp)
-                    # img_lp = torch.from_numpy(img_lp).to(device)
-                    # img_lp = img_lp.half() if half else img_lp.float()  # uint8 to fp16/32
-                    # img_lp /= 255.0  # 0 - 255 to 0.0 - 1.0
-                    # if img_lp.ndimension() == 3:
-                    #     img_lp = img_lp.unsqueeze(0)
-                    img_lp0 = extract_img_lp(im0, xyxy, img_lp, device, imgsz_recog, half)
-
-                    t1 = time_synchronized()
-                    # Inference
-                    pred_lp = model_recog(img_lp, augment=opt.augment)[0]
-                    # Apply NMS
-                    pred_lp = non_max_suppression(pred_lp, opt.conf_thres_recog, opt.iou_thres_recog,
-                                                  classes=opt.classes_recog, agnostic=opt.agnostic_nms)
-                    t2 = time_synchronized()
-                    all_t2_t1 = all_t2_t1 + t2 - t1
-                    # Apply Classifier
-                    if classify:
-                        pred_lp = apply_classifier(pred_lp, modelc, img_lp, img_lp0)
-                    # check_lp_lines_type
-                    cls = check_lp_lines_type(pred_lp[0], cls, img_lp, img_lp0)
-                    # Sort characters based on pred_lp
-                    license_str = sort_characters(pred_lp[0], cls, img_lp, img_lp0, names_recog)
-                    if len(license_str) == 0:
-                        continue
-
-                    if save_txt:  # Write to file
-                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
-                        with open(txt_path + '.txt', 'a') as f:
-                            f.write(('%g ' * len(line)).rstrip() % line + '\n')
-
-                    if save_img or view_img:  # Add bbox to image
-                        # label = '%s %.2f' % (names[int(cls)], conf)
-                        label = '%s %.2f' % (license_str, conf)
-                        line_thickness = 3 if im0.shape[0] < 500 else 4
-                        plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+                # But first, Recognition 
+                recog2(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, classify, modelc, names_recog, save_txt, gn, txt_path, save_img, view_img, colors)
 
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, all_t2_t1))
