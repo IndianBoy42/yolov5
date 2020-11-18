@@ -138,19 +138,10 @@ def recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, c
     img_lp0s = [extract_img_lp0(im0, xyxy, img_lp, device, imgsz_recog, half) for *xyxy, _, _ in reversed(det)]
     img_lps = [extract_img_lp1(img_lp0, img_lp, device, imgsz_recog, half) for img_lp0 in img_lp0s]
     
-    print()
-    print([x.shape for x in img_lps])
-    print()
-
-    # TODO: cannot stack because the img_lp doesn't come out the same size
-    img_lp = torch.stack(img_lps).to(device)
-    
-    print()
-    print(img_lp.shape)
-    print()
-    
-    img_lp = img_lp.half() if half else img_lp.float()
-    img_lp /= 255.0 # 0 - 255 to 0.0 - 1.0
+    height = max([x.shape[-2] for x in img_lps])
+    width = max([x.shape[-1] for x in img_lps])
+    img_lps = [torch.nn.ZeroPad2d((0,width-x.shape[-1],0,height-x.shape[-2]))(x) for x in img_lps]
+    img_lp = torch.cat(img_lps).to(device)
     
     t1 = time_synchronized()
     
@@ -170,10 +161,10 @@ def recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, c
         if classify:
             pred_lp = apply_classifier(pred_lp, modelc, img_lp, img_lp0)
         
-        cls = check_lp_lines_type(pred_lp[0], cls, img_lp, img_lp0)
+        cls = check_lp_lines_type(pred_lp, cls, img_lp, img_lp0)
         
         # Sort characters based on pred_lp
-        license_str = sort_characters(pred_lp[0], cls, img_lp, img_lp0, names_recog)
+        license_str = sort_characters(pred_lp, cls, img_lp, img_lp0, names_recog)
         if len(license_str) == 0:
             continue
 
@@ -286,7 +277,7 @@ def detect_recog(save_img=False):
 
                 # Write results
                 # But first, Recognition 
-                recog2(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, classify, modelc, names_recog, save_txt, gn, txt_path, save_img, view_img, colors)
+                recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, classify, modelc, names_recog, save_txt, gn, txt_path, save_img, view_img, colors)
 
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, all_t2_t1))
