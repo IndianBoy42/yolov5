@@ -129,13 +129,15 @@ def recog2(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, 
             xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
             line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
             with open(txt_path + '.txt', 'a') as f:
-                f.write(('%g ' * len(line)).rstrip() % line + '\n')
+                f.write(license_str + ' ' + ('%g ' * len(line)).rstrip() % line + '\n')
 
         if save_img or view_img:  # Add bbox to image
             # label = '%s %.2f' % (names[int(cls)], conf)
             label = '%s %.2f' % (license_str, conf)
             line_thickness = 3 if im0.shape[0] < 500 else 4
             plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+    
+    return all_t2_t1
 
 def recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, classify, modelc, names_recog, save_txt, gn, txt_path, save_img, view_img, colors):
     img_lp0s = [extract_img_lp0(im0, xyxy, img_lp, device, imgsz_recog, half) for *xyxy, _, _ in reversed(det)]
@@ -175,13 +177,15 @@ def recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, c
             xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
             line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
             with open(txt_path + '.txt', 'a') as f:
-                f.write(('%g ' * len(line)).rstrip() % line + '\n')
+                f.write(license_str + ' ' + ('%g ' * len(line)).rstrip() % line + '\n')
 
         if save_img or view_img:  # Add bbox to image
             # label = '%s %.2f' % (names[int(cls)], conf)
             label = '%s %.2f' % (license_str, conf)
             line_thickness = 3 if im0.shape[0] < 500 else 4
             plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+
+    return all_t2_t1
 
 
 def detect_recog():
@@ -208,7 +212,10 @@ def detect_recog():
         dataset = LoadImages(source, img_size=imgsz_detect)
 
     # Directories
-    save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
+    if opt.save_dir == 'runs/exp':
+        save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
+    else:
+        save_dir = Path(opt.save_dir)
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
     # Initialize
@@ -250,7 +257,6 @@ def detect_recog():
     for path, img, im0s, vid_cap in dataset:
         if img is None:
             continue
-        print(img.shape)
 
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -268,6 +274,9 @@ def detect_recog():
         t2 = time_synchronized()
         all_t2_t1 = t2-t1
 
+        # Print time (inference + NMS)
+        print('Done Detection. (%.3fs)' % (all_t2_t1))
+        
         # Apply Classifier
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
@@ -298,10 +307,7 @@ def detect_recog():
 
                 # Write results
                 # But first, Recognition 
-                recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, classify, modelc, names_recog, save_txt, gn, txt_path, save_img, view_img, colors)
-
-            # Print time (inference + NMS)
-            print('%sDone. (%.3fs)' % (s, all_t2_t1))
+                all_t2_t1 = recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, classify, modelc, names_recog, save_txt, gn, txt_path, save_img, view_img, colors)
 
             # Stream results
             if view_img:
@@ -325,6 +331,9 @@ def detect_recog():
                         h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
                     vid_writer.write(im0)
+
+        # Print time (inference + NMS)
+        print('%sDone. (%.3fs)' % (s, all_t2_t1))
 
     if save_txt or save_img:
         print('Results saved to %s' % save_dir)
@@ -355,8 +364,6 @@ class LoadStreamsBuffered:  # multiple IP or RTSP cameras
         thread = Thread(target=self.update, args=([cap]), daemon=True)
         print(' success (%gx%g at %.2f FPS).' % (w, h, fps))
         thread.start()
-
-        print('')  # newline
 
         # check for common shapes
         self.rect = True
@@ -401,6 +408,8 @@ class LoadStreamsBuffered:  # multiple IP or RTSP cameras
             img = img[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB, to bsx3x416x416
             img = np.ascontiguousarray(img)
 
+            print(f'Recieved {img.shape}')
+
             return self.source, img, img0, None
 
     def __len__(self):
@@ -419,6 +428,7 @@ if __name__ == '__main__':
     parser.add_argument('--iou-thres_recog', type=float, default=0.3, help='IOU threshold for NMS')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='display results')
+    parser.add_argument('--save-dir', type=str, default='runs/exp', help='save directory')
     parser.add_argument('--save-img', action='store_true', help='save images')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
