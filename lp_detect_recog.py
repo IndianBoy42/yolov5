@@ -5,7 +5,10 @@ from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
+import torch.autograd.profiler as profiler
 from numpy import random
+
+from threading import Thread
 
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
@@ -180,10 +183,29 @@ def recog(det, im0, device, img_lp, imgsz_recog, half, model_recog, all_t2_t1, c
             line_thickness = 3 if im0.shape[0] < 500 else 4
             plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
-def detect_recog(save_img=False):
-    source, weights_detect, weights_recog, view_img, save_txt, imgsz_detect, imgsz_recog = opt.source, opt.weights_detect, opt.weights_recog, opt.view_img, opt.save_txt, opt.img_size_detect, opt.img_size_recog
+
+def detect_recog():
+    source, weights_detect, weights_recog, view_img, save_txt, imgsz_detect, imgsz_recog, save_img = opt.source, opt.weights_detect, opt.weights_recog, opt.view_img, opt.save_txt, opt.img_size_detect, opt.img_size_recog, opt.save_img
+    
+    # Set Dataloader
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://'))
+    vid_path, vid_writer = None, None
+    shmstream = source.startswith('/tmp/')
+    if shmstream:
+        source = f"shmsrc socket-path={source} \
+                ! video/x-raw, format=BGR, width={int(imgsz_detect*4/3)}, height={imgsz_detect}, pixel-aspect-ratio=1/1, framerate=30/1 \
+                ! decodebin \
+                ! videoconvert \
+                ! appsink"
+        dataset = LoadStreamsBuffered(source, img_size=imgsz_detect)
+    elif webcam:
+        view_img = True
+        cudnn.benchmark = True  # set True to speed up constant image size inference
+        dataset = LoadStreams(source, img_size=imgsz_detect)
+    else:
+        save_img = True
+        dataset = LoadImages(source, img_size=imgsz_detect)
 
     # Directories
     save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
@@ -211,30 +233,25 @@ def detect_recog(save_img=False):
     else:
         modelc = None
 
-    # Set Dataloader
-    vid_path, vid_writer = None, None
-    if webcam:
-        view_img = True
-        cudnn.benchmark = True  # set True to speed up constant image size inference
-        dataset = LoadStreams(source, img_size=imgsz_detect)
-    else:
-        save_img = True
-        dataset = LoadImages(source, img_size=imgsz_detect)
-
     # Get names and colors
     names_detect = model_detect.module.names if hasattr(model_detect, 'module') else model_detect.names
     names_recog = model_recog.module.names if hasattr(model_recog, 'module') else model_recog.names
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names_detect]
 
-    # Run inference
     t0 = time.time()
     img = torch.zeros((1, 3, imgsz_detect, imgsz_detect), device=device)  # init img
     img_lp = torch.zeros((1, 3, imgsz_recog, imgsz_recog), device=device)  # init img
-    
-    _ = model_detect(img.half() if half else img) if device.type != 'cpu' else None  # run once
-    _ = model_recog(img.half() if half else img) if device.type != 'cpu' else None  # run once
+    if device.type != 'cpu': # run once
+        _ = model_detect(img.half() if half else img)  
+        _ = model_recog(img.half() if half else img) 
 
+    # Run inference
+    shmcounter = 0
     for path, img, im0s, vid_cap in dataset:
+        if img is None:
+            continue
+        print(img.shape)
+
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -257,13 +274,17 @@ def detect_recog(save_img=False):
 
         # Process detections
         for i, det in enumerate(pred):  # detections per image
-            if webcam:  # batch_size >= 1
+            if shmstream:
+                p, s, im0 = Path(f"{shmcounter}.jpg"), '%g: ' % i, im0s[i].copy()
+                shmcounter += 1
+            elif webcam:  # batch_size >= 1
                 p, s, im0 = Path(path[i]), '%g: ' % i, im0s[i].copy()
             else:
                 p, s, im0 = Path(path), '', im0s
 
             save_path = str(save_dir / p.name)
             txt_path = str(save_dir / 'labels' / p.stem) + ('_%g' % dataset.frame if dataset.mode == 'video' else '')
+            
             s += '%gx%g ' % img.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             if len(det):
@@ -311,6 +332,80 @@ def detect_recog(save_img=False):
     print('Done. (%.3fs)' % (time.time() - t0))
 
 
+class LoadStreamsBuffered:  # multiple IP or RTSP cameras
+    def __init__(self, source='/tmp/shm', img_size=640):
+        self.mode = 'images'
+        self.img_size = img_size
+
+        self.imgs = []
+        self.source = source
+        
+        # Start the thread to read frames from the video stream
+        print('%g/%g: %s... ' % (1, 1, source), end='')
+        cap = cv2.VideoCapture(source)
+        assert cap.isOpened(), 'Failed to open %s' % source
+        
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS) % 100
+        
+        _, tmp = cap.read()  # guarantee first frame
+        self.imgs.append(tmp)
+        
+        thread = Thread(target=self.update, args=([cap]), daemon=True)
+        print(' success (%gx%g at %.2f FPS).' % (w, h, fps))
+        thread.start()
+
+        print('')  # newline
+
+        # check for common shapes
+        self.rect = True
+
+    def update(self, cap):
+        # Read next stream frame in a daemon thread
+        while cap.isOpened():
+            # _, self.imgs[index][self.heads[index]] = cap.read()
+            cap.grab()
+            
+            _, tmp = cap.retrieve()
+            self.imgs.append(tmp)
+
+            time.sleep(0.01)  # wait time
+
+    def __iter__(self):
+        self.count = -1
+        return self
+
+    def __next__(self):
+        self.count += 1
+
+        # FIXME: Race Conditions??
+        img0 = self.imgs
+        self.imgs = []
+        # TODO: block if no new images
+
+        if len(img0) == 0:
+            return self.source, None, img0, None
+        else:
+            # if cv2.waitKey(1) == ord('q'):  # q to quit
+                # cv2.destroyAllWindows()
+                # raise StopIteration
+
+            # Letterbox
+            img = [letterbox(x, new_shape=self.img_size, auto=self.rect)[0] for x in img0]
+
+            # Stack
+            img = np.stack(img, 0)
+
+            # Convert
+            img = img[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB, to bsx3x416x416
+            img = np.ascontiguousarray(img)
+
+            return self.source, img, img0, None
+
+    def __len__(self):
+        return 0  # 1E12 frames = 32 streams at 30 FPS for 30 years
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights_detect', nargs='+', type=str, default='weights/yolov5s_detect.pt', help='model.pt path(s)')
@@ -324,7 +419,7 @@ if __name__ == '__main__':
     parser.add_argument('--iou-thres_recog', type=float, default=0.3, help='IOU threshold for NMS')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='display results')
-    # parser.add_argument('--save-img', action='store_true', help='save images to *.txt')
+    parser.add_argument('--save-img', action='store_true', help='save images')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
     parser.add_argument('--classes_detect', nargs='+', type=int, help='filter by class: --class 0, or --class 0 2 3')
@@ -340,3 +435,9 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         detect_recog()
+    # with profiler.profile(profile_memory=True) as prof:
+        # with torch.no_grad():
+        #     detect_recog()
+    # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+    # prof.export_chrome_trace("trace.json")
+

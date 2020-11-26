@@ -1,6 +1,7 @@
 import os
 
-input_imgs = 'inference/input'
+input_imgs = '/tmp/shm'
+# input_imgs = 'inference/input/2.JPG'
 output_dir = 'inference/output'
 device = 'cpu'
 
@@ -22,5 +23,5 @@ os.system(f"python lp_detect_recog.py --img-size_detect  {img_size_detect} --img
           f" --conf-thres_detect {conf_detect} --conf-thres_recog {conf_recog}"
           f" --iou-thres_detect {iou_recog} --iou-thres_detect {iou_recog}"
           f" --weights_detect {weights_file_detect} --weights_recog {weights_file_recog}"
-          f" --source {input_imgs} --device={device}")
+          f" --source {input_imgs} --device={device} --save-img")
 # os.system(f"python detect.py --img-size  {img_size} --conf-thres {conf} --iou-thres {iou} --weights {weights_file} --source {input_imgs} --output {output_dir} --device cpu")
