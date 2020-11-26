@@ -20,14 +20,15 @@ def outloop(out, fw, fh):
     i = 0
     while True:
         # read the frame from the file and send it to the 'out' stream
-        
-        # frame = vs.read()
-        frame = cv2.imread('inference/input/2.JPG')
-        # frame = cv2.resize(frame, (fw,fh))
-        print(frame.shape)
+        f = input('next? ')
+        if f == 'q': break
+        f = 'inference/input/2.JPG'
+
+        frame = cv2.imread(f)
+        frame = cv2.resize(frame, (fw,fh))
+        print(f, frame.shape)
         # frame = cv2.imread(input("fname: "))
-        # input('next')
-        
+                
         out(frame)
         i += 1
         print('.', end='')
@@ -52,7 +53,7 @@ def caploop(cap):
 
 # https://stackoverflow.com/questions/46219454/how-to-open-a-gstreamer-pipeline-from-opencv-with-videowriter
 
-def gstreamer_rtp(fps = 30, frame_width=4032, frame_height=3024):
+def gstreamer_rtp(fps = 30, frame_width=2133, frame_height=1600):
     gst_str = f"appsrc \
         ! videoconvert \
         ! shmsink socket-path={args.file} shm-size=100000000 sync=true wait-for-connection=false"
@@ -64,7 +65,7 @@ def gstreamer_rtp(fps = 30, frame_width=4032, frame_height=3024):
     
     outloop(out.write, frame_width, frame_height)
 
-def gstreamer_rtp_cap(fps = 30, frame_width=4032, frame_height=3024):
+def gstreamer_rtp_cap(fps = 30, frame_width=2133, frame_height=1600):
     gst_str = f"shmsrc socket-path={args.file} \
         ! video/x-raw, format=BGR, width={frame_width}, height={frame_height}, pixel-aspect-ratio=1/1, framerate={fps}/1 \
         ! decodebin \
