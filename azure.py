@@ -8,7 +8,7 @@ from lp_detect_recog import *
 
 imgsz_detect = 1600
 imgsz_recog = 224
-device = '0'
+device = 'cpu'
 
 
 def execute(cmd):
@@ -37,8 +37,8 @@ def init():
 
     # weights_detect = Model.get_model_path('lpr_detect')
     # weights_recog = Model.get_model_path('lpr_recog')
-    weights_detect = './weights/yolov5s_detect.pt'
-    weights_recog = './weights/yolov5s_recog.pt'
+    weights_detect = './yolov5/weights/yolov5s_detect.pt'
+    weights_recog = './yolov5/weights/yolov5s_recog.pt'
     # Load model
     model_detect = attempt_load(
         weights_detect, map_location=device)  # load FP32 model
@@ -51,7 +51,7 @@ def init():
 
     # Initialize
     set_logging()
-    device = select_device(opt.device)
+    device = select_device(device)
     half = device.type != 'cpu'  # half precision only supported on CUDA
 
     names_detect = model_detect.module.names if hasattr(
