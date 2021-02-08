@@ -9,10 +9,9 @@ pillow
 PyYAML>=5.3
 scipy>=1.4.1
 tensorboard>=2.2
-# pytorch>=1.6.0
 # must install for source or from wheel on ARM devices
-torch>=1.6.0
-torchvision>=0.7.0
+# torch>=1.6.0
+# torchvision>=0.7.0
 tqdm>=4.41.0
 
 # coco ----------------------------------------
