@@ -1,1 +1,1 @@
-https://github.com/Lmy0217/PyTorch-aarch64/raw/master/torch-1.6.0a0%2B8d883f5-cp36-cp36m-linux_aarch64.whl
+https://github.com/Kashu7100/pytorch-armv7l
