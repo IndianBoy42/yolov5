@@ -29,14 +29,6 @@ def execute(cmd):
 def init():
     global model_detect, model_recog, imgsz_detect, imgsz_recog, names_detect, names_recog, half, img_lp, device
 
-    try:    
-        for line in execute(['ls', '-1']):
-            print(line)
-            for line in execute(['ls', line.strip()]):
-                print(line)
-    except Exception as e:
-        print(e)
-
     # weights_detect = Model.get_model_path('lpr_detect')
     # weights_recog = Model.get_model_path('lpr_recog')
     weights_detect = './yolov5/weights/yolov5s_detect.pt'
