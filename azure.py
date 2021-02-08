@@ -2,6 +2,8 @@ import json
 import numpy as np
 import os
 import subprocess
+from PIL import Image
+import base64, json
 # from azureml.core.model import Model
 
 from lp_detect_recog import *
@@ -71,7 +73,11 @@ def init():
 def run(data):
     global img_lp
     try:
-        im0s = np.array(json.loads(data))
+        # im0s = np.array(json.loads(data))
+        b64png = json.loads(data)
+        png = base64.b64decode(b64png)
+        pilimage = Image.load(png)
+        im0s = np.array(pilimage)
 
         # Padded resize
         img = letterbox(img0, new_shape=self.img_size)[0]
