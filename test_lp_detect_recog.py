@@ -1,7 +1,8 @@
 import os
 
 # input_imgs = '/tmp/shm'
-input_imgs = 'inference/input/2.JPG'
+input_imgs = 'inference/input/'
+#input_imgs = 'inference/input/2.JPG'
 output_dir = 'inference/output'
 # device = '0'
 device = 'cpu'
