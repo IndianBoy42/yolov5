@@ -28,5 +28,5 @@ tqdm>=4.41.0
 # seaborn  # plotting
 
 # azure --------------------------------------
-azureml-defaults
-requests
+#azureml-defaults
+#requests
