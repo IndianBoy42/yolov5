@@ -18,6 +18,7 @@ with picamera.PiCamera() as camera:
     # time.sleep(2)
     print("Start")
     for i in iter():
+        start = time.perf_counter()
         stream = io.BytesIO()
 
         camera.capture(stream, format='png')
@@ -28,13 +29,13 @@ with picamera.PiCamera() as camera:
         output = base64.b64encode(stream.read()).decode('utf-8')
         print(type(output))
         json.dump({"data": output}, open(f'{outdir}/test{i}.json', 'w'))
-        req = json.dumps({"data": output})
 
         # image = Image.open(stream)
         # print(image)
         # image.save(f'{outdir}/cap{i}.png')
 
         # time.sleep(1)
-        print("Loop")
+        start = start - time.perf_counter()
+        print(f"Loop {start}")
         input("Next frame")
         
