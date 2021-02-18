@@ -6,7 +6,25 @@ from PIL import Image
 import base64, json
 import requests
 import uuid
+from io import BytesIO
 from azure import *
+
+server = "http://192.168.116.227:12000"
+
+def chunks(lst, n):
+    while True:
+        try:
+            yield [next(lst) for i in range(n)]
+        except:
+            break
+
+def getmac():
+    mac = uuid.getnode()
+    # return mac
+    mac = f'{uuid.getnode():02x}'
+    print(mac)
+    groups = (''.join(chunk) for chunk in chunks(iter(mac),2))
+    return ':'.join(groups)
 
 source = '0' # picamera
 
@@ -31,6 +49,35 @@ else:
     save_img = True
     dataset = LoadImages(source, img_size=imgsz_detect)
 
+while True:
+    try:
+        r = requests.post(server + '/setup/announceCamera', {
+            'mac': getmac(),
+        })
+        print(r)
+        print(r.json())
+        break
+    except Exception as e:
+        print(e)
+
+    try:
+        path, img, im0s, vid_cap = next(dataset)
+        im = Image.fromarray(np.unit8(im0s * 255))
+        with BytesIO() as f:
+            im.save(f, format='JPEG')
+            r = requests.post(server + '/setup/announceCamera', {
+                'mac': getmac(),
+            }, files={
+                "setupImage": f
+            })
+            print(r)
+            print(r.json())
+        break
+    except Exception as e:
+        print(e)
+
 for path, img, im0s, vid_cap in dataset:
     res = proc(img, im0s, view_img = view_img)
     print("Res", res)
+    if not webcam:
+        input('Continue?')
