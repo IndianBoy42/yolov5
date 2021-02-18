@@ -9,7 +9,8 @@ device = 'cpu'
 
 iou_detect = 0.3
 conf_detect = 0.5
-img_size_detect = 1600
+img_size_detect = 640
+#img_size_detect = 1600
 weights_file_detect = 'weights/yolov5s_detect.pt'
 
 iou_recog = 0.3
