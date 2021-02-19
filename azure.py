@@ -35,7 +35,7 @@ def execute(cmd):
 
 
 def init():
-    global model_detect, model_recog, imgsz_detect, imgsz_recog, names_detect, names_recog, half, img_lp, device
+    global model_detect, model_recog, imgsz_detect, imgsz_recog, names_detect, names_recog, half, img_lp, device, colors
 
     # weights_detect = Model.get_model_path('lpr_detect')
     # weights_recog = Model.get_model_path('lpr_recog')
@@ -60,6 +60,7 @@ def init():
         model_detect, 'module') else model_detect.names
     names_recog = model_recog.module.names if hasattr(
         model_recog, 'module') else model_recog.names
+    colors = [[random.randint(0, 255) for _ in range(3)] for _ in names_detect]
 
     img = torch.zeros((1, 3, imgsz_detect, imgsz_detect),
                       device=device)  # init img
@@ -70,6 +71,8 @@ def init():
         _ = model_recog(img.half() if half else img)
 
 def proc(img, im0s, view_img=False, save_img=False):
+    global model_detect, model_recog, imgsz_detect, imgsz_recog, names_detect, names_recog, half, img_lp, device, colors
+
     img = torch.from_numpy(img).to(device)
     img = img.half() if half else img.float()  # uint8 to fp16/32
     img /= 255.0  # 0 - 255 to 0.0 - 1.0
