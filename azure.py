@@ -157,9 +157,9 @@ def proc(img, im0s, view_img=False, save_img=False):
                     'lp': license_str,
                     'cls': cls.item(),
                     'x': xywh[0] * im0.shape[1],
-                    'y': xywh[1] * im0.shape[0],
+                    'y': (1-xywh[1]) * im0.shape[0],
                     'w': xywh[2] * im0.shape[1],
-                    'h': xywh[3] * im0.shape[0],
+                    'h': -xywh[3] * im0.shape[0],
                     'conf': conf.item()
                 })
 

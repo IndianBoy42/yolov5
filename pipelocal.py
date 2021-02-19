@@ -25,6 +25,8 @@ def getmac():
     groups = (''.join(chunk) for chunk in chunks(iter(mac),2))
     return ':'.join(groups)
 
+print(getmac())
+
 source = '0' # picamera
 webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
     ('rtsp://', 'rtmp://', 'http://'))
@@ -95,7 +97,7 @@ for path, img, im0s, vid_cap in dataset_iter:
             continue
         print('New')
         requests.put(server + '/operation/spotFilled', data={
-            'lpr': detection['lp'],
+            **detection,
             'mac': getmac()
         })
     nxt = set(det['lp'] for det in res)
@@ -105,6 +107,7 @@ for path, img, im0s, vid_cap in dataset_iter:
             continue
         print('Gone')
         requests.put(server + '/operation/spotVacated', data={
-            
+            'lp': detection,
+            'mac': getmac()
         })
     prev = nxt
