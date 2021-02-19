@@ -60,12 +60,13 @@ while True:
     except Exception as e:
         print(e)
 
-    try:
+while True:
+    try: # Send the setupImage
         path, img, im0s, vid_cap = next(dataset)
         im = Image.fromarray(np.unit8(im0s * 255))
-        with BytesIO() as f:
+        with open('firstImg.jpg', 'rw') as f:
             im.save(f, format='JPEG')
-            r = requests.post(server + '/setup/announceCamera', {
+            r = requests.post(server + '/setup/addCameraImage', {
                 'mac': getmac(),
             }, files={
                 "setupImage": f
