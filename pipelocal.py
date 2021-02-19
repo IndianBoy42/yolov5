@@ -59,10 +59,10 @@ while True:
         break
     except Exception as e:
         print(e)
-
+dataset_iter = iter(dataset)
 while True:
     try: # Send the setupImage
-        path, img, im0s, vid_cap = next(dataset)
+        path, img, im0s, vid_cap = next(dataset_iter)
         im = Image.fromarray(np.unit8(im0s * 255))
         with open('firstImg.jpg', 'rw') as f:
             im.save(f, format='JPEG')
@@ -77,7 +77,7 @@ while True:
     except Exception as e:
         print(e)
 
-for path, img, im0s, vid_cap in dataset:
+for path, img, im0s, vid_cap in dataset_iter:
     res = proc(img, im0s, view_img = view_img)
     print("Res", res)
     if not webcam:
