@@ -27,9 +27,6 @@ def getmac():
     return ':'.join(groups)
 
 source = '0' # picamera
-
-init() # Initialize LPR
-
 webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
     ('rtsp://', 'rtmp://', 'http://'))
 vid_path, vid_writer = None, None
@@ -49,36 +46,63 @@ else:
     save_img = True
     dataset = LoadImages(source, img_size=imgsz_detect)
 
-while True:
+print('announceCamera')
+while False:
     try:
         r = requests.post(server + '/setup/announceCamera', {
             'mac': getmac(),
+            'isActive': 'true',
         })
         print(r)
         print(r.json())
         break
     except Exception as e:
         print(e)
+
 dataset_iter = iter(dataset)
-while True:
+path, img, im0s, vid_cap = next(dataset_iter)
+im = Image.fromarray(np.uint8(im0s[0] * 255))
+with open('firstImg.png', 'wb') as f:
+    im.save(f, format='PNG')
+
+print('addCameraImage')
+while False:
     try: # Send the setupImage
-        path, img, im0s, vid_cap = next(dataset_iter)
-        im = Image.fromarray(np.unit8(im0s * 255))
-        with open('firstImg.jpg', 'rw') as f:
-            im.save(f, format='JPEG')
-            r = requests.post(server + '/setup/addCameraImage', {
+        with open('firstImg.png', 'rb') as f:
+            r = requests.post(server + '/setup/addCameraImage', data={
                 'mac': getmac(),
+                'name': "name",
+                'desc': "desc"
             }, files={
-                "setupImage": f
+                "image": f
             })
-            print(r)
-            print(r.json())
+            print('Response:',r)
+            print('Res JSON:', r.json())
         break
     except Exception as e:
         print('addCameraImage Error:', e)
 
+init() # Initialize LPR
+
+
+prev = {}
 for path, img, im0s, vid_cap in dataset_iter:
     res = proc(img, im0s, view_img = view_img)
     print("Res", res)
     if not webcam:
         input('Continue?')
+    for detection in res:
+        if detection.lp in prev: # Already detected
+            continue
+        requests.post(server + '/operation/spotFilled', data={
+            'lpr': detection.lp,
+            'mac': getmac()
+        })
+    nxt = set(det.lp for det in res)
+    for detection in prev:
+        if detection in nxt: # Still detected
+            continue
+        requests.post(server + '/operation/spotVacated', data={
+            
+        })
+    prev = nxt
