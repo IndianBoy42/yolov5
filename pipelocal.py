@@ -22,7 +22,6 @@ def getmac():
     mac = uuid.getnode()
     # return mac
     mac = f'{uuid.getnode():02x}'
-    print(mac)
     groups = (''.join(chunk) for chunk in chunks(iter(mac),2))
     return ':'.join(groups)
 
@@ -88,21 +87,24 @@ init() # Initialize LPR
 prev = {}
 for path, img, im0s, vid_cap in dataset_iter:
     res = proc(img, im0s, view_img = view_img)
-    print("Res", res)
     if not webcam:
         input('Continue?')
     for detection in res:
-        if detection.lp in prev: # Already detected
+        print('Curr: ', detection)
+        if detection['lp'] in prev: # Already detected
             continue
-        requests.post(server + '/operation/spotFilled', data={
-            'lpr': detection.lp,
+        print('New')
+        requests.put(server + '/operation/spotFilled', data={
+            'lpr': detection['lp'],
             'mac': getmac()
         })
-    nxt = set(det.lp for det in res)
+    nxt = set(det['lp'] for det in res)
     for detection in prev:
+        print('Old: ', detection)
         if detection in nxt: # Still detected
             continue
-        requests.post(server + '/operation/spotVacated', data={
+        print('Gone')
+        requests.put(server + '/operation/spotVacated', data={
             
         })
     prev = nxt
