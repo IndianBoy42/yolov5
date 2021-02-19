@@ -75,7 +75,7 @@ while True:
             print(r.json())
         break
     except Exception as e:
-        print(e)
+        print('addCameraImage Error:', e)
 
 for path, img, im0s, vid_cap in dataset:
     res = proc(img, im0s, view_img = view_img)
