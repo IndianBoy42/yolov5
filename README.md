@@ -1,3 +1,21 @@
+# Instructions for HKUST FYP 2021
+
+For running on the Raspberry PI:
+
+0. install drivers you require for WiFi and the webcam that you use
+
+1. install the python dependencies (to a virtualenv)
+for arm there is some complication with installing pytorch, you may use:
+- requirements-arm.txt for most of it
+- then download and install the wheel from https://github.com/Kashu7100/pytorch-armv7l
+
+2. The main script for the pi is `pipelocal.py`
+- The server it communicates with is stored in the `server` variable at the top of the file
+  - Please change this according to where you run the server
+- It will announce its presence to the server using the Pi's MAC address
+- It will use source '0' by default, which will usually be correct for the only webcam (usb or picamera)
+- It will run continuously at ~3 seconds per frame
+
 <a href="https://apps.apple.com/app/id1452689527" target="_blank">
 <img src="https://user-images.githubusercontent.com/26833433/98699617-a1595a00-2377-11eb-8145-fc674eb9b1a7.jpg" width="1000"></a>
 &nbsp
