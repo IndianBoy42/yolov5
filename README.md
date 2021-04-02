@@ -3,6 +3,7 @@
 For running on the Raspberry PI:
 
 0. install drivers you require for WiFi and the webcam that you use
+- for the builtin camera port you will need to enable it in `raspiconfig` or the raspbian settings menu
 
 1. install the python dependencies (to a virtualenv)
 for arm there is some complication with installing pytorch, you may use:
