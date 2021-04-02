@@ -9,6 +9,8 @@ for arm there is some complication with installing pytorch, you may use:
 - requirements-arm.txt for most of it
 - then download and install the wheel from https://github.com/Kashu7100/pytorch-armv7l
 
+1.5. you can check the detection performance and correctness locally using `cam_lp_detect_recog.py`
+
 2. The main script for the pi is `pipelocal.py`
 - The server it communicates with is stored in the `server` variable at the top of the file
   - Please change this according to where you run the server
