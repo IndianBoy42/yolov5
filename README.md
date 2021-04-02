@@ -9,15 +9,23 @@ For running on the Raspberry PI:
 for arm there is some complication with installing pytorch, you may use:
 - requirements-arm.txt for most of it
 - then download and install the wheel from https://github.com/Kashu7100/pytorch-armv7l
+```
+# In a virtual environment
+pip install -r requirements-arm.txt
+wget https://github.com/Kashu7100/pytorch-armv7l/raw/main/torch-1.7.0a0-cp37-cp37m-linux_armv7l.whl
+pip install torch-1.7.0a0-cp37-cp37m-linux_armv7l.whl
+wget https://github.com/Kashu7100/pytorch-armv7l/raw/main/torchvision-0.8.0a0%2B45f960c-cp37-cp37m-linux_armv7l.whl
+pip install https://github.com/Kashu7100/pytorch-armv7l/raw/main/torch-1.7.0a0-cp37-cp37m-linux_armv7l.whl
+```
 
 1.5. you can check the detection performance and correctness locally using `cam_lp_detect_recog.py`
 
-2. The main script for the pi is `pipelocal.py`
-- The server it communicates with is stored in the `server` variable at the top of the file
+2. The main script for the pi is `fypPiInferenceClient.py`
+- The address server it communicates with is stored in the `server` variable at the top of the file
   - Please change this according to where you run the server
 - It will announce its presence to the server using the Pi's MAC address
-- It will use source '0' by default, which will usually be correct for the only webcam (usb or picamera)
-- It will run continuously at ~3 seconds per frame
+- It will use source '0' by default, which will usually be correct if it is the only webcam (usb or picamera) connected
+- It will run continuously and send license plate detection from then
 
 <a href="https://apps.apple.com/app/id1452689527" target="_blank">
 <img src="https://user-images.githubusercontent.com/26833433/98699617-a1595a00-2377-11eb-8145-fc674eb9b1a7.jpg" width="1000"></a>
