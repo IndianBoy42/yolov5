@@ -9,7 +9,9 @@ import uuid
 from io import BytesIO
 from azure import *
 
-server = "http://192.168.45.171:12000"
+server = "http://192.168.45.227:12000"
+#server = "http://172.31.175.255:12000"
+#server = "http://192.168.45.171:12000"
 # server = "http://175.159.124.105:12000"
 
 def chunks(lst, n):
@@ -24,7 +26,8 @@ def getmac():
     # return mac
     mac = f'{uuid.getnode():02x}'
     groups = (''.join(chunk) for chunk in chunks(iter(mac),2))
-    return ':'.join(groups)
+    return ''.join(groups)
+    #return ':'.join(groups)
 
 print(getmac())
 
@@ -71,23 +74,23 @@ im = Image.fromarray(np.uint8(im0s[0] * 255))
 with open(f'{getmac()}.png', 'wb') as f:
     im.save(f, format='PNG')
 
-    print('addCameraImage')
-    while keepRetryingServerConnection:
-        try: # Send the setupImage
-            print("trying...")
-            with open('firstImg.png', 'rb') as f:
-                r = requests.post(server + '/setup/addCameraImage', data={
-                    'mac': getmac(),
-                    'name': "name",
-                    'desc': "desc"
-                }, files={
-                    "image": f
-                })
-                print('Response:',r)
-                print('Res JSON:', r.json())
-            break
-        except Exception as e:
-            print('addCameraImage Error:', e)
+print('addCameraImage')
+while keepRetryingServerConnection:
+    try: # Send the setupImage
+        print("trying...")
+        with open(f'{getmac()}.png', 'rb') as f:
+            r = requests.post(server + '/setup/addCameraImage', data={
+                'mac': getmac(),
+                'name': "name",
+                'desc': "desc"
+            }, files={
+                "file": f
+            })
+            print('Response:',r)
+            print('Res JSON:', r.json())
+        break
+    except Exception as e:
+        print('addCameraImage Error:', e)
 
 init() # Initialize LPR
 
