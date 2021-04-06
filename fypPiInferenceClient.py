@@ -9,7 +9,8 @@ import uuid
 from io import BytesIO
 from azure import *
 
-server = "http://192.168.116.227:12000"
+server = "http://192.168.45.171:12000"
+# server = "http://175.159.124.105:12000"
 
 def chunks(lst, n):
     while True:
@@ -47,9 +48,13 @@ else:
     save_img = True
     dataset = LoadImages(source, img_size=imgsz_detect)
 
+
+keepRetryingServerConnection = True
+
 print('announceCamera')
-while False:
+while keepRetryingServerConnection:
     try:
+        print("trying...")
         r = requests.post(server + '/setup/announceCamera', {
             'mac': getmac(),
             'isActive': 'true',
@@ -63,25 +68,26 @@ while False:
 dataset_iter = iter(dataset)
 path, img, im0s, vid_cap = next(dataset_iter)
 im = Image.fromarray(np.uint8(im0s[0] * 255))
-with open('firstImg.png', 'wb') as f:
+with open(f'{getmac()}.png', 'wb') as f:
     im.save(f, format='PNG')
 
-print('addCameraImage')
-while False:
-    try: # Send the setupImage
-        with open('firstImg.png', 'rb') as f:
-            r = requests.post(server + '/setup/addCameraImage', data={
-                'mac': getmac(),
-                'name': "name",
-                'desc': "desc"
-            }, files={
-                "image": f
-            })
-            print('Response:',r)
-            print('Res JSON:', r.json())
-        break
-    except Exception as e:
-        print('addCameraImage Error:', e)
+    print('addCameraImage')
+    while keepRetryingServerConnection:
+        try: # Send the setupImage
+            print("trying...")
+            with open('firstImg.png', 'rb') as f:
+                r = requests.post(server + '/setup/addCameraImage', data={
+                    'mac': getmac(),
+                    'name': "name",
+                    'desc': "desc"
+                }, files={
+                    "image": f
+                })
+                print('Response:',r)
+                print('Res JSON:', r.json())
+            break
+        except Exception as e:
+            print('addCameraImage Error:', e)
 
 init() # Initialize LPR
 
