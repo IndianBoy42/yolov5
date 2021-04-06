@@ -8,6 +8,7 @@ For running on the Raspberry PI:
 1. install the python dependencies (to a virtualenv)
 for arm there is some complication with installing pytorch, you may use:
 - requirements-arm.txt for most of it
+- `sudo apt install libatlas-base-dev`
 - then download and install the wheel from https://github.com/Kashu7100/pytorch-armv7l
 ```
 # In a virtual environment
