@@ -29,7 +29,7 @@ def getmac():
     mac = f"{uuid.getnode():02x}"
     groups = ("".join(chunk) for chunk in chunks(iter(mac), 2))
     return "".join(groups)
-    # return ':'.join(groups)
+    # return ':'.join(groues)
 
 
 print(getmac())
