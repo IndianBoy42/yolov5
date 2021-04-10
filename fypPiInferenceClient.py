@@ -7,7 +7,7 @@ import base64, json
 import requests
 import uuid
 from io import BytesIO
-from azure import *
+from helpers import *
 
 server = "http://192.168.45.227:12000"
 # server = "http://172.31.175.255:12000"
