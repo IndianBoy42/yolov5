@@ -384,7 +384,7 @@ def detect_recog():
                     vid_writer.write(im0)
 
         # Print time (inference + NMS)
-        print('%sDone. (%.3fs)' % (s, all_t2_t1))
+        print('%sDone Recognition. (%.3fs)' % (s, all_t2_t1))
 
     if save_txt or save_img:
         print('Results saved to %s' % save_dir)

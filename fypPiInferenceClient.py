@@ -9,7 +9,7 @@ import uuid
 import websockets
 import asyncio
 from io import BytesIO
-from azure import *
+from helpers import *
 
 compute_server = "http://35.241.86.83:8000"
 server = "http://192.168.137.192:12000"
