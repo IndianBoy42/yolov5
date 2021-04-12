@@ -8,7 +8,7 @@ import base64, json
 
 from lp_detect_recog import *
 
-imgsz_detect = 640
+imgsz_detect = 1920
 imgsz_recog = 224
 device = 'cpu'
 
