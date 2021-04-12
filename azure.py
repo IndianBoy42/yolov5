@@ -72,7 +72,11 @@ def init():
         _ = model_detect(img.half() if half else img)
         _ = model_recog(img.half() if half else img)
 
+first_proc = True
 def proc(img, im0s, view_img=False, save_img=False):
+    if first_proc:
+        init()
+        first_proc = False
     global model_detect, model_recog, imgsz_detect, imgsz_recog, names_detect, names_recog, half, img_lp, device, colors
 
     img = torch.from_numpy(img).to(device)

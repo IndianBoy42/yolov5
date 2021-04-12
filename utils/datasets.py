@@ -250,7 +250,7 @@ class LoadWebcam:  # for inference
 
 
 class LoadStreams:  # multiple IP or RTSP cameras
-    def __init__(self, sources='streams.txt', img_size=640):
+    def __init__(self, sources='streams.txt', img_size=640, cap_size=(1920, 1080)):
         self.mode = 'images'
         self.img_size = img_size
 
@@ -268,6 +268,8 @@ class LoadStreams:  # multiple IP or RTSP cameras
             print('%g/%g: %s... ' % (i + 1, n, s), end='')
             cap = cv2.VideoCapture(eval(s) if s.isnumeric() else s)
             assert cap.isOpened(), 'Failed to open %s' % s
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, cap_size[0])
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_size[1])
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS) % 100
