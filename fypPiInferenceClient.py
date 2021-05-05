@@ -206,6 +206,7 @@ def processingIter(lprProc, mem, filled, buffSize, countThreshold):
 
 
 def processingLoop(lprProc=remote_proc, lock=None):
+    global dataset_iter
     # prev = {}
     mem = []
     filled = []
