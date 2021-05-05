@@ -1,11 +1,12 @@
 import asyncio
 import json
-from yolov5.fypPiInferenceClient import (
+from fypPiInferenceClient import (
     addCameraImage,
     announceCamera,
     getmac,
     processingLoop,
 )
+from fypPiInferenceClient import addCameraImage, announceCamera, processingLoop
 import websockets
 import threading
 
