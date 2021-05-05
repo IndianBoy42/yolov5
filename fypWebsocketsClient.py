@@ -19,11 +19,11 @@ async def websockListener(uri):
     processingLock = threading.Lock()
     processingLock.acquire()
     processingLocked = True
-    processingThread = threading.Thread(target=processingLoop, args=(processingLock))
+    processingThread = threading.Thread(target=processingLoop, args=(processingLock, ))
     processingThread.start()
 
     async with websockets.connect(uri) as websocket:
-        websocket.send(json.dumps({"msg": "mac", "mac": getmac()}))
+        await websocket.send(json.dumps({"msg": "mac", "mac": getmac()}))
 
         while True:
             message = await websocket.recv()
@@ -32,11 +32,11 @@ async def websockListener(uri):
             if message == "sendSetupImage":
                 addCameraImage()
             elif message == "startLPR":
-                if not processingLocked:
+                if processingLocked:
                     processingLock.release()  # prevent the processing thread from acquiring the lock, thus it wont process
                     processingLocked = True
             elif message == "stopLPR":
-                if processingLocked:
+                if not processingLocked:
                     processingLock.acquire()
                     processingLocked = False
 
