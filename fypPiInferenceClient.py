@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 import numpy as np
 import os
 import subprocess
@@ -141,7 +142,9 @@ def update_mem(l, arr, input):
     return arr
 
 
-def processingIter(lprProc, mem, filled, buffSize, countThreshold):
+def processingIter(
+    lprProc, mem, filled, buffSize, countThreshold, path, img, im0s, vid_cap
+):
     res = lprProc(img, im0s, view_img=view_img)
     if not webcam:
         input("Continue?")
@@ -205,13 +208,33 @@ def processingIter(lprProc, mem, filled, buffSize, countThreshold):
     #         )
 
 
-def processingLoop(lprProc=remote_proc, lock=None):
+@contextmanager
+def nopLock():
+    try:
+        yield True
+    except e:
+        pass
+    finally:
+        pass
+
+
+def processingLoop(lock=None, lprProc=remote_proc):
     global dataset_iter
     # prev = {}
     mem = []
     filled = []
     buffSize = 5
     countThreshold = 3
+
+    # if lock is None:
+    #     lock = nopLock()
+    # while True:
+    #     with lock:
+    #         path, img, im0s, vid_cap = next(dataset_iter)
+    #         processingIter(
+    #             lprProc, mem, filled, buffSize, countThreshold, path, img, im0s, vid_cap
+    #         )
+
     for path, img, im0s, vid_cap in dataset_iter:
         processingIter(lprProc, mem, filled, buffSize, countThreshold)
         if lock is not None:
