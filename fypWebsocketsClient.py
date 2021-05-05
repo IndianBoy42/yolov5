@@ -19,7 +19,7 @@ async def websockListener(uri):
     processingLock = threading.Lock()
     processingLock.acquire()
     processingLocked = True
-    processingThread = threading.Thread(target=processingLoop, args=(processingLock, ))
+    processingThread = threading.Thread(target=processingLoop, args=(processingLock,))
     processingThread.start()
 
     async with websockets.connect(uri) as websocket:
@@ -34,11 +34,11 @@ async def websockListener(uri):
             elif message == "startLPR":
                 if processingLocked:
                     processingLock.release()  # prevent the processing thread from acquiring the lock, thus it wont process
-                    processingLocked = True
+                    processingLocked = False
             elif message == "stopLPR":
                 if not processingLocked:
                     processingLock.acquire()
-                    processingLocked = False
+                    processingLocked = True
 
 
 def startWebsockets(uri="ws://35.241.86.83:12000"):
