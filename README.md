@@ -19,9 +19,9 @@ wget https://github.com/Kashu7100/pytorch-armv7l/raw/main/torchvision-0.8.0a0%2B
 pip install https://github.com/Kashu7100/pytorch-armv7l/raw/main/torch-1.7.0a0-cp37-cp37m-linux_armv7l.whl
 ```
 
-1.5. you can check the detection performance and correctness locally using `cam_lp_detect_recog.py`
+- 1.5. you can check the detection performance and correctness locally using `cam_lp_detect_recog.py`
 
-2. The main script for the pi is `fypPiInferenceClient.py`
+2. The main script for the pi is `fypWebsocketsClient.py`
 - The address server it communicates with is stored in the `server` variable at the top of the file
   - Please change this according to where you run the server
 - It will announce its presence to the server using the Pi's MAC address
@@ -49,16 +49,16 @@ This repository represents Ultralytics open-source research into future object d
 
 ## Pretrained Checkpoints
 
-| Model | AP<sup>val</sup> | AP<sup>test</sup> | AP<sub>50</sub> | Speed<sub>GPU</sub> | FPS<sub>GPU</sub> || params | FLOPS |
-|---------- |------ |------ |------ | -------- | ------| ------ |------  |  :------: |
-| [YOLOv5s](https://github.com/ultralytics/yolov5/releases)    | 37.0     | 37.0     | 56.2     | **2.4ms** | **416** || 7.5M   | 13.2B
-| [YOLOv5m](https://github.com/ultralytics/yolov5/releases)    | 44.3     | 44.3     | 63.2     | 3.4ms     | 294     || 21.8M  | 39.4B
-| [YOLOv5l](https://github.com/ultralytics/yolov5/releases)    | 47.7     | 47.7     | 66.5     | 4.4ms     | 227     || 47.8M  | 88.1B
-| [YOLOv5x](https://github.com/ultralytics/yolov5/releases)    | **49.2** | **49.2** | **67.7** | 6.9ms     | 145     || 89.0M  | 166.4B
-| | | | | | || |
-| [YOLOv5x](https://github.com/ultralytics/yolov5/releases) + TTA|**50.8**| **50.8** | **68.9** | 25.5ms    | 39      || 89.0M  | 354.3B
-| | | | | | || |
-| [YOLOv3-SPP](https://github.com/ultralytics/yolov5/releases) | 45.6     | 45.5     | 65.2     | 4.5ms     | 222     || 63.0M  | 118.0B
+| Model                                                           | AP<sup>val</sup> | AP<sup>test</sup> | AP<sub>50</sub> | Speed<sub>GPU</sub> | FPS<sub>GPU</sub> |     | params | FLOPS  |
+| --------------------------------------------------------------- | ---------------- | ----------------- | --------------- | ------------------- | ----------------- | --- | ------ | :----: |
+| [YOLOv5s](https://github.com/ultralytics/yolov5/releases)       | 37.0             | 37.0              | 56.2            | **2.4ms**           | **416**           |     | 7.5M   | 13.2B  |
+| [YOLOv5m](https://github.com/ultralytics/yolov5/releases)       | 44.3             | 44.3              | 63.2            | 3.4ms               | 294               |     | 21.8M  | 39.4B  |
+| [YOLOv5l](https://github.com/ultralytics/yolov5/releases)       | 47.7             | 47.7              | 66.5            | 4.4ms               | 227               |     | 47.8M  | 88.1B  |
+| [YOLOv5x](https://github.com/ultralytics/yolov5/releases)       | **49.2**         | **49.2**          | **67.7**        | 6.9ms               | 145               |     | 89.0M  | 166.4B |
+|                                                                 |                  |                   |                 |                     |                   |     |        |
+| [YOLOv5x](https://github.com/ultralytics/yolov5/releases) + TTA | **50.8**         | **50.8**          | **68.9**        | 25.5ms              | 39                |     | 89.0M  | 354.3B |
+|                                                                 |                  |                   |                 |                     |                   |     |        |
+| [YOLOv3-SPP](https://github.com/ultralytics/yolov5/releases)    | 45.6             | 45.5              | 65.2            | 4.5ms               | 222               |     | 63.0M  | 118.0B |
 
 ** AP<sup>test</sup> denotes COCO [test-dev2017](http://cocodataset.org/#upload) server results, all other AP results in the table denote val2017 accuracy.  
 ** All AP numbers are for single-model single-scale without ensemble or test-time augmentation. **Reproduce** by `python test.py --data coco.yaml --img 640 --conf 0.001`  
