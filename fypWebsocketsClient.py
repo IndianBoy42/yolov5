@@ -1,11 +1,12 @@
 import asyncio
 import json
-from yolov5.fypPiInferenceClient import (
+from fypPiInferenceClient import (
     addCameraImage,
     announceCamera,
     getmac,
     processingLoop,
 )
+from fypPiInferenceClient import addCameraImage, announceCamera, processingLoop
 import websockets
 import threading
 
@@ -18,11 +19,11 @@ async def websockListener(uri):
     processingLock = threading.Lock()
     processingLock.acquire()
     processingLocked = True
-    processingThread = threading.Thread(target=processingLoop, args=(processingLock))
+    processingThread = threading.Thread(target=processingLoop, args=(processingLock, ))
     processingThread.start()
 
     async with websockets.connect(uri) as websocket:
-        websocket.send(json.dumps({"msg": "mac", "mac": getmac()}))
+        await websocket.send(json.dumps({"msg": "mac", "mac": getmac()}))
 
         while True:
             message = await websocket.recv()
