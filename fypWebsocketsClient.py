@@ -31,11 +31,11 @@ async def websockListener(uri):
             if message == "sendSetupImage":
                 addCameraImage()
             elif message == "startLPR":
-                if not processingLocked:
+                if processingLocked:
                     processingLock.release()  # prevent the processing thread from acquiring the lock, thus it wont process
                     processingLocked = True
             elif message == "stopLPR":
-                if processingLocked:
+                if not processingLocked:
                     processingLock.acquire()
                     processingLocked = False
 

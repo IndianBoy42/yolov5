@@ -165,10 +165,10 @@ def processingIter(
                 print("Response:", serverResponse)
 
     # nxt = set(det["lp"] for det in res)
+    print("Processing")
     print("Filled :", filled)
     mem = update_mem(buffSize, mem, set(det["lp"] for det in res))
-    print("mem ")
-    print(mem)
+    print("mem ", mem)
     finished = []
     for lp in filled:
         lpCount = 0
