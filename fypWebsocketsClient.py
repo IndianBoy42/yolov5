@@ -13,7 +13,7 @@ from fypPiInferenceClient import (
 import websockets
 import threading
 
-TIMEOUT = 10
+TIMEOUT = 30
 
 
 async def periodic():
@@ -32,29 +32,33 @@ async def websockListener(uri):
     processingThread.start()
 
     while True:
-        async with websockets.connect(uri) as websocket:
-            await websocket.send(json.dumps({"msg": "mac", "mac": getmac()}))
+        try:
+            async with websockets.connect(uri) as websocket:
+                await websocket.send(json.dumps({"msg": "mac", "mac": getmac()}))
 
-            while True:
-                try:
-                    message = asyncio.wait_for(websocket.recv(), timeout=TIMEOUT)
-                except Exception as e:
-                    print(e)
-                    break
+                while True:
+                    try:
+                        message = await asyncio.wait_for(websocket.recv(), timeout=TIMEOUT)
+                    except Exception as e:
+                        print(e)
+                        break
 
-                print(f"< {message}")
-                if message == "sendSetupImage":
-                    addCameraImage()
-                elif message == "startLPR":
-                    if processingLocked:
-                        processingLock.release()  # prevent the processing thread from acquiring the lock, thus it wont process
-                        processingLocked = False
-                elif message == "stopLPR":
-                    if not processingLocked:
-                        processingLock.acquire()
-                        processingLocked = True
-                elif message == "ping":
-                    await websocket.send("pong")
+                    print(f"< {message}")
+                    if message == "sendSetupImage":
+                        addCameraImage()
+                    elif message == "startLPR":
+                        if processingLocked:
+                            processingLock.release()  # prevent the processing thread from acquiring the lock, thus it wont process
+                            processingLocked = False
+                    elif message == "stopLPR":
+                        if not processingLocked:
+                            processingLock.acquire()
+                            processingLocked = True
+                    elif message == "ping":
+                        await websocket.send("pong")
+        except Exception as e:
+            await asyncio.sleep(1)
+            print(e)
 
 
 def startWebsockets(uri=server):
