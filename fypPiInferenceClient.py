@@ -53,7 +53,7 @@ if shmstream:
             ! appsink"
     dataset = LoadStreamsBuffered(source, img_size=imgsz_detect)
 elif webcam:
-    view_img = True
+    view_img = False
     cudnn.benchmark = True  # set True to speed up constant image size inference
     dataset = LoadStreams(source, img_size=imgsz_detect)
 else:
