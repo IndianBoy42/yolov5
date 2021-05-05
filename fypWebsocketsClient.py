@@ -23,8 +23,7 @@ async def periodic():
 
 async def websockListener(uri):
     if uri.startswith("http"):
-        uri.lstrip("http")
-        uri = "ws" + uri
+        uri = "ws" + uri.lstrip("http")
 
     processingLock = threading.Lock()
     processingLock.acquire()
