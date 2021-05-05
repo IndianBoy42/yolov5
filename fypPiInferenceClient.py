@@ -35,7 +35,7 @@ def getmac():
     # return ':'.join(groups)
 
 
-print(getmac())
+print("I am: ", getmac())
 
 source = "0"  # picamera
 webcam = (
@@ -63,23 +63,27 @@ else:
 
 keepRetryingServerConnection = True
 
-print("announceCamera")
-while keepRetryingServerConnection:
-    try:
-        print("trying...")
-        r = requests.post(
-            server + "/setup/announceCamera",
-            {
-                "mac": getmac(),
-                "isActive": "true",
-            },
-        )
-        print(r)
-        print(r.json())
-        break
-    except Exception as e:
-        print(e)
 
+def announceCamera():
+    print("announceCamera")
+    while keepRetryingServerConnection:
+        try:
+            print("trying...")
+            r = requests.post(
+                server + "/setup/announceCamera",
+                {
+                    "mac": getmac(),
+                    "isActive": "true",
+                },
+            )
+            print(r)
+            print(r.json())
+            break
+        except Exception as e:
+            print(e)
+
+
+# capture and save one image for setup
 dataset_iter = iter(dataset)
 path, img, im0s, vid_cap = next(dataset_iter)
 cv2.imwrite(f"{getmac()}.jpeg", im0s[0])
@@ -88,40 +92,34 @@ cv2.imwrite(f"{getmac()}.jpeg", im0s[0])
 # with open(f"{getmac()}.jpeg", "wb") as f:
 #     im.save(f, format="JPEG")
 
-print("addCameraImage")
-while keepRetryingServerConnection:
-    try:  # Send the setupImage
-        print("trying...")
-        filename =  f"{getmac()}.jpeg"
-        with open(filename, "rb") as f:
-            r = requests.post(
-                server + "/setup/addCameraImage",
-                data={"mac": getmac(), "name": "name", "desc": "desc"},
-                files={"file": (os.path.basename(filename), f, 'image/jpeg'),
-                },
-            )
-            print("Response:", r)
-            print("Res JSON:", r.json())
-        break
-    except Exception as e:
-        print("addCameraImage Error:", e)
 
-async def listen():
-    url = "ws://192.168.45.227:12000"
-
-    async with websockets.connect(url) as ws:
-        while True: 
-            msg = await ws.recv()
-            print(msg)
+def addCameraImage():
+    print("addCameraImage")
+    while keepRetryingServerConnection:
+        try:  # Send the setupImage
+            print("trying...")
+            filename = f"{getmac()}.jpeg"
+            with open(filename, "rb") as f:
+                r = requests.post(
+                    server + "/setup/addCameraImage",
+                    data={"mac": getmac(), "name": "name", "desc": "desc"},
+                    files={
+                        "file": (os.path.basename(filename), f, "image/jpeg"),
+                    },
+                )
+                print("Response:", r)
+                print("Res JSON:", r.json())
+            break
+        except Exception as e:
+            print("addCameraImage Error:", e)
 
 
-# asyncio.get_event_loop().run_until_complete(listen())   
 def remote_proc(img, im0s, view_img=False, **kwargs):
     res = []
     for im0 in im0s:
-        if view_img: 
-            cv2.imshow('view', im0)
-            if cv2.waitKey(1) == ord('q'):  # q to quit
+        if view_img:
+            cv2.imshow("view", im0)
+            if cv2.waitKey(1) == ord("q"):  # q to quit
                 raise StopIteration
         succ, buffer = cv2.imencode(".png", im0)
         f = BytesIO(buffer)
@@ -129,47 +127,43 @@ def remote_proc(img, im0s, view_img=False, **kwargs):
             compute_server + "/lpr",
             files={"file": f},
         )
-        res += r.json()['results']
+        res += r.json()["results"]
     return res
 
-def update_mem(l,arr, input) :       
-    if len(arr) == l :
-        for i in range(len(arr)-1):
-            arr[i] = arr[i+1]
-        arr[len(arr)-1] = input
+
+def update_mem(l, arr, input):
+    if len(arr) == l:
+        for i in range(len(arr) - 1):
+            arr[i] = arr[i + 1]
+        arr[len(arr) - 1] = input
     else:
         arr.append(input)
     return arr
-        
 
 
-# prev = {}
-mem = []
-filled = []
-buffSize = 5
-countThreshold = 3
-for path, img, im0s, vid_cap in dataset_iter:
-    res = remote_proc(img, im0s, view_img=view_img)
+def processingIter(lprProc, mem, filled, buffSize, countThreshold):
+    res = lprProc(img, im0s, view_img=view_img)
     if not webcam:
         input("Continue?")
     for detection in res:
         print("Curr: ", detection)
-        count = 0;
-        if detection["lp"] not in filled :
+        count = 0
+        if detection["lp"] not in filled:
             for prev in mem:
                 if detection["lp"] in prev:  # Already detected
-                    count +=1
-            if count == countThreshold :
+                    count += 1
+            if count == countThreshold:
                 print("New", detection["lp"])
                 filled.append(detection["lp"])
                 serverResponse = requests.put(
-                    server + "/operation/spotFilled", data={**detection, "mac": getmac()}
+                    server + "/operation/spotFilled",
+                    data={**detection, "mac": getmac()},
                 )
                 print("Response:", serverResponse)
 
     # nxt = set(det["lp"] for det in res)
-    print("Filled :" ,filled)
-    mem = update_mem(buffSize,mem,set(det["lp"] for det in res))
+    print("Filled :", filled)
+    mem = update_mem(buffSize, mem, set(det["lp"] for det in res))
     print("mem ")
     print(mem)
     finished = []
@@ -184,16 +178,16 @@ for path, img, im0s, vid_cap in dataset_iter:
                     isDetected = True
                     break
             if isDetected:
-                lpCount+=1
+                lpCount += 1
                 # print("lpcount:" , lpCount)
-                
+
         if lpCount < countThreshold:
             print("Gone", lp)
             requests.put(
                 server + "/operation/spotVacated", data={"lp": lp, "mac": getmac()}
             )
 
-        else :
+        else:
             finished.append(lp)
             # print ("finished")
             # print(finished)
@@ -209,3 +203,24 @@ for path, img, im0s, vid_cap in dataset_iter:
     #         requests.put(
     #             server + "/operation/spotVacated", data={"lp": detection, "mac": getmac()}
     #         )
+
+
+def processingLoop(lprProc=remote_proc, lock=None):
+    # prev = {}
+    mem = []
+    filled = []
+    buffSize = 5
+    countThreshold = 3
+    for path, img, im0s, vid_cap in dataset_iter:
+        if lock is not None:
+            with lock:
+                processingIter(lprProc, mem, filled, buffSize, countThreshold)
+        else:
+            processingIter(lprProc, mem, filled, buffSize, countThreshold)
+
+
+# If this file is run directly
+if __name__ == "__main__":
+    announceCamera()
+    addCameraImage()
+    processingLoop()  # lprProc=proc for local inference
