@@ -213,11 +213,10 @@ def processingLoop(lprProc=remote_proc, lock=None):
     buffSize = 5
     countThreshold = 3
     for path, img, im0s, vid_cap in dataset_iter:
+        processingIter(lprProc, mem, filled, buffSize, countThreshold)
         if lock is not None:
-            with lock:
-                processingIter(lprProc, mem, filled, buffSize, countThreshold)
-        else:
-            processingIter(lprProc, mem, filled, buffSize, countThreshold)
+            lock.acquire()
+            lock.release()
 
 
 # If this file is run directly

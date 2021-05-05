@@ -18,16 +18,17 @@ async def websockListener(uri):
     async with websockets.connect(uri) as websocket:
         while True:
             message = await websocket.recv()
+
             print(f"< {message}")
             if message == "sendSetupImage":
                 addCameraImage()
             elif message == "startLPR":
                 if not processingLocked:
-                    processingLock.acquire()  # prevent the processing thread from acquiring the lock, thus it wont process
+                    processingLock.release()  # prevent the processing thread from acquiring the lock, thus it wont process
                     processingLocked = True
             elif message == "stopLPR":
                 if processingLocked:
-                    processingLock.release()
+                    processingLock.acquire()
                     processingLocked = False
 
 
